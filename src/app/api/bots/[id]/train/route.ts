@@ -32,7 +32,8 @@ export async function POST(
     // Update bot status
     await supabase
       .from('bots')
-      .update({ status: 'training' })
+      // @ts-ignore - Update type mismatch
+      .update({ status: 'training' } as any)
       .eq('id', id)
 
     // Get all sources
@@ -44,7 +45,8 @@ export async function POST(
     if (!sources || sources.length === 0) {
       await supabase
         .from('bots')
-        .update({ status: 'draft' })
+        // @ts-ignore - Update type mismatch
+        .update({ status: 'draft' } as any)
         .eq('id', id)
       return NextResponse.json({ error: 'No knowledge sources to train' }, { status: 400 })
     }
@@ -81,7 +83,8 @@ async function retrainAllSources(
     for (const source of sources) {
       await supabase
         .from('knowledge_sources')
-        .update({ status: 'processing' })
+        // @ts-ignore - Update type mismatch
+        .update({ status: 'processing' } as any)
         .eq('id', source.id)
 
       let textContent = source.content || ''
@@ -101,10 +104,11 @@ async function retrainAllSources(
           console.error('Error fetching URL:', fetchError)
           await supabase
             .from('knowledge_sources')
+            // @ts-ignore - Update type mismatch
             .update({
               status: 'error',
               error_message: 'Failed to fetch URL content',
-            })
+            } as any)
             .eq('id', source.id)
           continue
         }
@@ -117,14 +121,16 @@ async function retrainAllSources(
         try {
           const embedding = await generateEmbedding(chunks[i])
 
-          await supabase.from('knowledge_chunks').insert({
-            source_id: source.id,
-            bot_id: botId,
-            content: chunks[i],
-            embedding: embedding,
-            chunk_index: i,
-            metadata: { source_type: source.source_type },
-          })
+          await supabase.from('knowledge_chunks')
+            // @ts-ignore - Insert type mismatch
+            .insert({
+              source_id: source.id,
+              bot_id: botId,
+              content: chunks[i],
+              embedding: embedding,
+              chunk_index: i,
+              metadata: { source_type: source.source_type },
+            } as any)
         } catch (embeddingError) {
           console.error('Error generating embedding:', embeddingError)
         }
@@ -133,28 +139,31 @@ async function retrainAllSources(
       // Update source status
       await supabase
         .from('knowledge_sources')
+        // @ts-ignore - Update type mismatch
         .update({
           status: 'completed',
           chunk_count: chunks.length,
           character_count: textContent.length,
           processed_at: new Date().toISOString(),
-        })
+        } as any)
         .eq('id', source.id)
     }
 
     // Update bot status
     await supabase
       .from('bots')
+      // @ts-ignore - Update type mismatch
       .update({
         status: 'active',
         last_trained_at: new Date().toISOString(),
-      })
+      } as any)
       .eq('id', botId)
   } catch (error) {
     console.error('Error retraining sources:', error)
     await supabase
       .from('bots')
-      .update({ status: 'error' })
+      // @ts-ignore - Update type mismatch
+      .update({ status: 'error' } as any)
       .eq('id', botId)
   }
 }

@@ -79,9 +79,9 @@ export async function POST(
     const { type, name, content, url } = body
 
     // Create knowledge source
-    // @ts-ignore - Supabase types unavailable in demo mode
     const { data: source, error: sourceError } = await supabase
       .from('knowledge_sources')
+      // @ts-ignore - Insert type mismatch with database types
       .insert({
         bot_id: id,
         source_type: type,
@@ -90,17 +90,17 @@ export async function POST(
         content: type === 'text' ? content : null,
         status: 'pending',
         character_count: content?.length || 0,
-      })
+      } as any)
       .select()
       .single()
 
-    if (sourceError) {
+    if (sourceError || !source) {
       console.error('Error creating source:', sourceError)
       return NextResponse.json({ error: 'Failed to create source' }, { status: 500 })
     }
 
     // Process the source asynchronously
-    processKnowledgeSource(source.id, id, type, content || url, supabase)
+    processKnowledgeSource((source as any).id, id, type, content || url, supabase)
 
     return NextResponse.json({ source }, { status: 201 })
   } catch (error) {
@@ -119,10 +119,10 @@ async function processKnowledgeSource(
 ) {
   try {
     // Update status to processing
-    // @ts-ignore - Supabase types unavailable in demo mode
     await supabase
       .from('knowledge_sources')
-      .update({ status: 'processing' })
+      // @ts-ignore - Update type mismatch
+      .update({ status: 'processing' } as any)
       .eq('id', sourceId)
 
     let textContent = content
@@ -141,13 +141,13 @@ async function processKnowledgeSource(
           .trim()
       } catch (fetchError) {
         console.error('Error fetching URL:', fetchError)
-        // @ts-ignore - Supabase types unavailable in demo mode
         await supabase
           .from('knowledge_sources')
+          // @ts-ignore - Update type mismatch
           .update({
             status: 'error',
             error_message: 'Failed to fetch URL content',
-          })
+          } as any)
           .eq('id', sourceId)
         return
       }
@@ -162,15 +162,16 @@ async function processKnowledgeSource(
       try {
         const embedding = await generateEmbedding(chunk)
 
-        // @ts-ignore - Supabase types unavailable in demo mode
-        await supabase.from('knowledge_chunks').insert({
-          source_id: sourceId,
-          bot_id: botId,
-          content: chunk,
-          embedding: embedding,
-          chunk_index: i,
-          metadata: { source_type: type },
-        })
+        await supabase.from('knowledge_chunks')
+          // @ts-ignore - Insert type mismatch
+          .insert({
+            source_id: sourceId,
+            bot_id: botId,
+            content: chunk,
+            embedding: embedding,
+            chunk_index: i,
+            metadata: { source_type: type },
+          } as any)
       } catch (embeddingError) {
         console.error('Error generating embedding for chunk:', embeddingError)
       }
@@ -179,27 +180,30 @@ async function processKnowledgeSource(
     // Update source status
     await supabase
       .from('knowledge_sources')
+      // @ts-ignore - Update type mismatch
       .update({
         status: 'completed',
         chunk_count: chunks.length,
         character_count: textContent.length,
         processed_at: new Date().toISOString(),
-      })
+      } as any)
       .eq('id', sourceId)
 
     // Update bot's last trained timestamp
     await supabase
       .from('bots')
-      .update({ last_trained_at: new Date().toISOString() })
+      // @ts-ignore - Update type mismatch
+      .update({ last_trained_at: new Date().toISOString() } as any)
       .eq('id', botId)
   } catch (error) {
     console.error('Error processing knowledge source:', error)
     await supabase
       .from('knowledge_sources')
+      // @ts-ignore - Update type mismatch
       .update({
         status: 'error',
         error_message: 'Failed to process content',
-      })
+      } as any)
       .eq('id', sourceId)
   }
 }

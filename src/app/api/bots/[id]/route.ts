@@ -89,10 +89,10 @@ export async function PATCH(
     }
 
     if (Object.keys(botUpdates).length > 0) {
-      // @ts-ignore - Supabase types unavailable in demo mode
       const { error: botError } = await supabase
         .from('bots')
-        .update(botUpdates)
+        // @ts-ignore - Update type mismatch with database types
+        .update(botUpdates as any)
         .eq('id', id)
 
       if (botError) {
@@ -112,10 +112,10 @@ export async function PATCH(
       if (body.appearance.position !== undefined) appearanceUpdates.position = body.appearance.position
 
       if (Object.keys(appearanceUpdates).length > 0) {
-        // @ts-ignore - Supabase types unavailable in demo mode
         await supabase
           .from('bot_appearance')
-          .update(appearanceUpdates)
+          // @ts-ignore - Update type mismatch with database types
+          .update(appearanceUpdates as any)
           .eq('bot_id', id)
       }
     }
@@ -134,10 +134,10 @@ export async function PATCH(
       if (body.leadCapture.triggerAfterMessages !== undefined) leadCaptureUpdates.trigger_after_messages = body.leadCapture.triggerAfterMessages
 
       if (Object.keys(leadCaptureUpdates).length > 0) {
-        // @ts-ignore - Supabase types unavailable in demo mode
         await supabase
           .from('lead_capture_settings')
-          .update(leadCaptureUpdates)
+          // @ts-ignore - Update type mismatch with database types
+          .update(leadCaptureUpdates as any)
           .eq('bot_id', id)
       }
     }

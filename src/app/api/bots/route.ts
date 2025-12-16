@@ -60,7 +60,7 @@ export async function POST(request: NextRequest) {
       .select('*', { count: 'exact', head: true })
       .eq('user_id', user.id)
 
-    if (profile && botCount !== null && botCount >= profile.bot_limit) {
+    if (profile && botCount !== null && botCount >= (profile as any).bot_limit) {
       return NextResponse.json(
         { error: 'Bot limit reached. Please upgrade your plan.' },
         { status: 403 }
@@ -87,11 +87,12 @@ export async function POST(request: NextRequest) {
 
     const { data: bot, error: botError } = await supabase
       .from('bots')
-      .insert(botData)
+      // @ts-ignore - Insert type mismatch
+      .insert(botData as any)
       .select()
       .single()
 
-    if (botError) {
+    if (botError || !bot) {
       console.error('Error creating bot:', botError)
       return NextResponse.json({ error: 'Failed to create bot' }, { status: 500 })
     }
@@ -99,15 +100,16 @@ export async function POST(request: NextRequest) {
     // Create default appearance settings
     const { error: appearanceError } = await supabase
       .from('bot_appearance')
+      // @ts-ignore - Insert type mismatch
       .insert({
-        bot_id: bot.id,
+        bot_id: (bot as any).id,
         avatar_type: body.avatarType || 'preset',
         avatar_preset: body.avatarPreset || 'bot-1',
         avatar_url: body.avatarUrl || null,
         primary_color: body.primaryColor || '#3B82F6',
         secondary_color: body.secondaryColor || '#1E40AF',
         position: body.position || 'bottom-right',
-      })
+      } as any)
 
     if (appearanceError) {
       console.error('Error creating appearance:', appearanceError)
@@ -116,8 +118,9 @@ export async function POST(request: NextRequest) {
     // Create default lead capture settings
     const { error: leadCaptureError } = await supabase
       .from('lead_capture_settings')
+      // @ts-ignore - Insert type mismatch
       .insert({
-        bot_id: bot.id,
+        bot_id: (bot as any).id,
         is_enabled: body.leadCaptureEnabled ?? true,
         collect_name: body.collectName ?? true,
         name_required: body.nameRequired ?? false,
@@ -127,7 +130,7 @@ export async function POST(request: NextRequest) {
         phone_required: body.phoneRequired ?? false,
         trigger_type: body.triggerType || 'after_messages',
         trigger_after_messages: body.triggerAfterMessages || 2,
-      })
+      } as any)
 
     if (leadCaptureError) {
       console.error('Error creating lead capture settings:', leadCaptureError)
@@ -141,7 +144,7 @@ export async function POST(request: NextRequest) {
         bot_appearance (*),
         lead_capture_settings (*)
       `)
-      .eq('id', bot.id)
+      .eq('id', (bot as any).id)
       .single()
 
     return NextResponse.json({ bot: completeBots }, { status: 201 })
